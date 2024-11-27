@@ -1,0 +1,286 @@
+{
+    "admin": {
+        "disabled": false,
+        "enforce_origin": true,
+        "identity": {
+            "issuers": [
+                {
+                    "challenges": {
+                        "dns": {
+                            "provider": {
+                                "api_token": "GqemcDGW2gsVVCCCM_5LjJkZhE1LJOZFp2YXAw4m",
+                                "name": "cloudflare"
+                            }
+                        },
+                        "http": {
+                            "disabled": true
+                        }
+                    },
+                    "email": "mustafa@chainly.dev",
+                    "module": "acme"
+                }
+            ]
+        },
+        "origins": [
+            "localhost:3000",
+            "localhost",
+            "127.0.0.1:2019",
+            "localhost:2019"
+        ]
+    },
+    "apps": {
+        "http": {
+            "servers": {
+                "myserver": {
+                    "automatic_https": {
+                        "disable": true,
+                        "disable_redirects": true
+                    },
+                    "listen": [
+                        ":2222"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "distributed": null,
+                                    "handler": "rate_limit",
+                                    "log_key": true,
+                                    "rate_limits": {
+                                        "dynamic1d": {
+                                            "key": "{http.request.remote.host}",
+                                            "max_events": 100,
+                                            "window": "1d"
+                                        },
+                                        "dynamic1m": {
+                                            "key": "{http.request.remote.host}",
+                                            "max_events": 10,
+                                            "window": "1m"
+                                        },
+                                        "dynamic1s": {
+                                            "key": "{http.request.remote.host}",
+                                            "max_events": 5,
+                                            "window": "1s"
+                                        }
+                                    }
+                                },
+                                {
+                                    "handler": "reverse_proxy",
+                                    "load_balancing": {
+                                        "try_duration": "1m"
+                                    },
+                                    "upstreams": [
+                                        {
+                                            "dial": "10.66.6.36:8672"
+                                        },
+                                        {
+                                            "dial": "104.167.198.52:18545"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "match": [
+                                {
+                                    "host": [
+                                        "localhost.test"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "layer4": {
+            "servers": {
+                "main": {
+                    "listen": [
+                        ":443"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "connection_policies": [
+                                        {
+                                            "alpn": [
+                                                "http/1.1"
+                                            ]
+                                        }
+                                    ],
+                                    "handler": "tls"
+                                },
+                                {
+                                    "handler": "proxy",
+                                    "upstreams": [
+                                        {
+                                            "dial": [
+                                                "localhost:8545"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "match": [
+                                {
+                                    "tls": {
+                                        "sni": [
+                                            "x.ethereum.c.rpc.chainly.dev"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "handle": [
+                                {
+                                    "connection_policies": [
+                                        {
+                                            "alpn": [
+                                                "http/1.1"
+                                            ]
+                                        }
+                                    ],
+                                    "handler": "tls"
+                                },
+                                {
+                                    "handler": "proxy",
+                                    "upstreams": [
+                                        {
+                                            "dial": [
+                                                "localhost:8548"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "match": [
+                                {
+                                    "tls": {
+                                        "sni": [
+                                            "x.base.c.rpc.chainly.dev"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "handle": [
+                                {
+                                    "connection_policies": [
+                                        {
+                                            "alpn": [
+                                                "http/1.1"
+                                            ]
+                                        }
+                                    ],
+                                    "handler": "tls"
+                                },
+                                {
+                                    "handler": "proxy",
+                                    "upstreams": [
+                                        {
+                                            "dial": [
+                                                "localhost:8546"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "match": [
+                                {
+                                    "tls": {
+                                        "sni": [
+                                            "x.polygon.c.rpc.chainly.dev"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "handle": [
+                                {
+                                    "connection_policies": [
+                                        {
+                                            "alpn": [
+                                                "http/1.1"
+                                            ]
+                                        }
+                                    ],
+                                    "handler": "tls"
+                                },
+                                {
+                                    "handler": "proxy",
+                                    "upstreams": [
+                                        {
+                                            "dial": [
+                                                "localhost:8547"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "match": [
+                                {
+                                    "tls": {
+                                        "sni": [
+                                            "x.optimism.c.rpc.chainly.dev"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "tls": {
+            "automation": {
+                "policies": [
+                    {
+                        "issuers": [
+                            {
+                                "challenges": {
+                                    "dns": {
+                                        "provider": {
+                                            "api_token": "GqemcDGW2gsVVCCCM_5LjJkZhE1LJOZFp2YXAw4m",
+                                            "name": "cloudflare"
+                                        }
+                                    },
+                                    "http": {
+                                        "disabled": true
+                                    }
+                                },
+                                "email": "mustafa@chainly.dev",
+                                "module": "acme"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "certificates": {
+                "automate": [
+                    "x.ethereum.c.rpc.chainly.dev",
+                    "x.base.c.rpc.chainly.dev",
+                    "x.optimism.c.rpc.chainly.dev",
+                    "x.polygon.c.rpc.chainly.dev",
+                    "x.n8n.hackerspace.dev"
+                ]
+            }
+        }
+    },
+    "logging": {
+        "logs": {
+            "default": {
+                "writer": {
+                    "output":"mongo_log",
+                    "mongoUri":"mongodb://root:example@10.66.6.37:27099/",
+                    "database":"logger",
+                    "collection":"col1"
+
+                },
+                "level": "DEBUG"
+            }
+        }
+    }
+}
