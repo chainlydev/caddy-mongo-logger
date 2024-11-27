@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -152,39 +151,15 @@ type mongoWriter struct {
 }
 
 func (mWrite *mongoWriter) Write(p []byte) (n int, err error) {
+
 	f := map[string]interface{}{}
 	if err := json.Unmarshal(p, &f); err != nil {
 		mWrite.logger.Error("Unmarshal failed on log", zap.Error((err)))
 	}
 
-	fields := map[string]interface{}{}
-	flatten(f, fields, "")
-
-	tags := map[string]string{}
-	for key, element := range mWrite.tags {
-		val := element
-		if strings.HasPrefix(element, "{") && strings.HasSuffix(element, "}") {
-			if v, ok := fields[element[1:len(element)-1]]; ok {
-				switch x := v.(type) {
-				case string:
-					val = x
-				default:
-					b, err := json.Marshal(x)
-					if err != nil {
-						mWrite.logger.Error("Marshal failed on log", zap.Error((err)))
-					}
-
-					val = string(b)
-				}
-			}
-		}
-
-		tags[key] = val
-	}
-
 	mWrite.collection.InsertOne(context.Background(), bson.M{
-		"tags":     tags,
-		"metadata": fields,
+		"tags":     "",
+		"metadata": f,
 		"date":     primitive.NewDateTimeFromTime(time.Now()),
 	})
 
