@@ -35,6 +35,13 @@ func (m *MongoReqId) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
 	return nil
 }
+func (l *MongoReqId) String() string {
+	return "mongo_request_id"
+}
+
+func (l *MongoReqId) WriterKey() string {
+	return "mongo_request_id"
+}
 func (m MongoReqId) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	uid, _ := uuid.NewV7()
@@ -53,7 +60,7 @@ func (m MongoReqId) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 func (m MongoReqId) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.mongo_request_id",
-		New: func() caddy.Module { return new(MongoLog) },
+		New: func() caddy.Module { return new(MongoReqId) },
 	}
 }
 func (m *MongoReqId) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
