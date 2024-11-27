@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,6 +22,50 @@ import (
 
 func init() {
 	caddy.RegisterModule(MongoLog{})
+	caddy.RegisterModule(MongoReqId{})
+	httpcaddyfile.RegisterHandlerDirective("request_id", parseCaddyfile)
+}
+
+type MongoReqId struct {
+	logger *zap.Logger
+}
+
+func (m *MongoReqId) Provision(ctx caddy.Context) error {
+	m.logger = ctx.Logger(m)
+	return nil
+}
+func (m MongoReqId) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+	uid, _ := uuid.NewV7()
+
+	id := uid.String()
+	repl.Set("http.request_id", id)
+
+	data, _ := io.ReadAll(r.Body)
+	dataResp, _ := io.ReadAll(r.Response.Body)
+	m.logger.Debug("mongolog", zap.String("req_id", id), zap.String("req_body", string(data)), zap.String("resp_body", string(dataResp)))
+	w.Header().Add("X-Request-Id", id)
+	return next.ServeHTTP(w, r)
+}
+
+// CaddyModule implements caddy.Module.
+func (m MongoReqId) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "http.handlers.request_id",
+		New: func() caddy.Module { return new(MongoLog) },
+	}
+}
+func (m *MongoReqId) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return nil
+}
+func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	m := new(MongoReqId)
+	err := m.UnmarshalCaddyfile(h.Dispenser)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 type MongoLog struct {
@@ -186,8 +234,12 @@ func (mWrite *mongoWriter) Open(i *MongoLog) error {
 
 // Interface guards.
 var (
-	_ caddy.Provisioner     = (*MongoLog)(nil)
-	_ caddy.Validator       = (*MongoLog)(nil)
-	_ caddy.WriterOpener    = (*MongoLog)(nil)
-	_ caddyfile.Unmarshaler = (*MongoLog)(nil)
+	_ caddy.Provisioner           = (*MongoLog)(nil)
+	_ caddy.Provisioner           = (*MongoReqId)(nil)
+	_ caddy.Provisioner           = (*MongoReqId)(nil)
+	_ caddyhttp.MiddlewareHandler = (*MongoReqId)(nil)
+	_ caddyfile.Unmarshaler       = (*MongoReqId)(nil)
+	_ caddy.Validator             = (*MongoLog)(nil)
+	_ caddy.WriterOpener          = (*MongoLog)(nil)
+	_ caddyfile.Unmarshaler       = (*MongoLog)(nil)
 )
