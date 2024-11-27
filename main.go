@@ -23,11 +23,12 @@ import (
 func init() {
 	caddy.RegisterModule(MongoLog{})
 	caddy.RegisterModule(MongoReqId{})
-	httpcaddyfile.RegisterHandlerDirective("request_id", parseCaddyfile)
+	httpcaddyfile.RegisterHandlerDirective("mongo_request_id", parseCaddyfile)
 }
 
 type MongoReqId struct {
 	logger *zap.Logger
+	Header string `json:"header,omitempty"`
 }
 
 func (m *MongoReqId) Provision(ctx caddy.Context) error {
@@ -39,7 +40,7 @@ func (m MongoReqId) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 	uid, _ := uuid.NewV7()
 
 	id := uid.String()
-	repl.Set("http.request_id", id)
+	repl.Set("http.mongo_request_id", id)
 
 	data, _ := io.ReadAll(r.Body)
 	dataResp, _ := io.ReadAll(r.Response.Body)
@@ -51,7 +52,7 @@ func (m MongoReqId) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 // CaddyModule implements caddy.Module.
 func (m MongoReqId) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.handlers.request_id",
+		ID:  "http.handlers.mongo_request_id",
 		New: func() caddy.Module { return new(MongoLog) },
 	}
 }
