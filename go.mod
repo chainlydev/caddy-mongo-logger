@@ -1,4 +1,4 @@
-module mono_log
+module github.com/chainlydev/caddy-mongo-logger
 
 go 1.23.3
 
